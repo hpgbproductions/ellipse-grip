@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ModManifest buildID="25bb8131-8617-4a76-910c-83b91330285a">
+  <Mod name="Elliptical grip model" author="hpgbproductions" versionMajor="1" versionMinor="0" loadPriority="1000" lastUpdated="2023-09-23T13:25:47.6207357Z" apiVersion="1.0.0.0" description="">
+    <Steam title="" visibility="Public" previewPath="" language="English" tags="">
+      <description></description>
+    </Steam>
+    <GameObjects>
+      <GameObject name="elg-plugin" path="Assets/_ModAssets_/elg-plugin.prefab" />
+    </GameObjects>
+    <Assets />
+    <MaterialShaderMap />
+    <Assemblies>
+      <Assembly name="Ellipticalgripmodel-Assembly-CSharp.dll" path="Assets/_ModAssets_/Ellipticalgripmodel-Assembly-CSharp.dll.bytes" isProjectAssembly="true" />
+    </Assemblies>
+    <Sections>
+      <SimplePlanesMod apiVersion="1.0.0.0">
+        <Maps />
+        <Levels />
+        <Parts />
+        <DesignerPlugins />
+        <MapPlugins>
+          <MapPlugin objectName="elg-plugin" />
+        </MapPlugins>
+        <PersistentObjects />
+      </SimplePlanesMod>
+    </Sections>
+  </Mod>
+</ModManifest>
