@@ -19,6 +19,8 @@ public class EllipseGripScript : MonoBehaviour
     private PropertyInfo SidewaysSlipInfo;
     private PropertyInfo ForwardFrictionInfo;
     private PropertyInfo SidewaysFrictionInfo;
+    private FieldInfo SurfaceNormalInfo;
+    private FieldInfo WheelRadiusInfo;
 
     private TypeInfo FrictionCurveTypeInfo;
     private PropertyInfo FrictionCurveAsymptoteSlipInfo;
@@ -30,24 +32,17 @@ public class EllipseGripScript : MonoBehaviour
     private bool ParticlesEnabled = true;
     private float ParticleTimer = 0f;
     private float ParticlePeriod = 0.02f;
-    private Gradient ParticleGradient;
     private ParticleSystem.EmitParams OverrideParams = new ParticleSystem.EmitParams();
 
-    private Color ParticleColor
-    {
-        set
-        {
-            ParticleGradient.colorKeys = new GradientColorKey[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(value, 1f) };
-            
-        }
-    }
-    private float ParticleAlpha
-    {
-        set
-        {
-            ParticleGradient.alphaKeys = new GradientAlphaKey[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(value, 1f) };
-        }
-    }
+    private Color ParticleColor = Color.white;
+    private float ParticleAlphaPower = 3f;
+
+    [SerializeField] private GameObject SkidmarkObjectPrefab;
+    private bool SkidmarksEnabled = true;
+    private float SkidmarksTimer = 0f;
+    private float SkidmarksPeriod = 0.02f;
+    private float SkidmarksMaximumOpacity = 1f;
+    private float SkidmarksMaximumOverload = 0.33f;
 
     // Maximum loss of grip perpendicular to current load
     private float EffectStrength = 0.25f;
@@ -61,16 +56,16 @@ public class EllipseGripScript : MonoBehaviour
         DebugText = new StringBuilder(1000);
         ServiceProvider.Instance.DevConsole.RegisterCommand("EllipseGrip_ToggleDebugMode", ToggleDebugMode);
         ServiceProvider.Instance.DevConsole.RegisterCommand("EllipseGrip_ToggleParticles", ToggleParticles);
+        ServiceProvider.Instance.DevConsole.RegisterCommand("EllipseGrip_ToggleSkidmarks", ToggleSkidmarks);
         ServiceProvider.Instance.DevConsole.RegisterCommand<Color>("EllipseGrip_SetParticleColor", SetParticleColor);
+        ServiceProvider.Instance.DevConsole.RegisterCommand<float>("EllipseGrip_SetParticleAlphaExponent", SetParticleAlphaExponent);
         ServiceProvider.Instance.DevConsole.RegisterCommand<float>("EllipseGrip_SetStrength", SetEffectStrength);
-
-        ParticleGradient = new Gradient();
-        ParticleColor = Color.white;
-        ParticleAlpha = 1f;
     }
 
     private void FixedUpdate()
     {
+        transform.position = -ServiceProvider.Instance.GameWorld.FloatingOriginOffset;
+
         TryUpdateListsTimer -= Time.fixedDeltaTime;
         if (TryUpdateListsTimer <= 0f)
         {
@@ -101,6 +96,8 @@ public class EllipseGripScript : MonoBehaviour
                 SidewaysSlipInfo = RwcTypeInfo.GetProperty("SidewaysSlip");
                 ForwardFrictionInfo = RwcTypeInfo.GetProperty("ForwardFriction");
                 SidewaysFrictionInfo = RwcTypeInfo.GetProperty("SidewaysFriction");
+                SurfaceNormalInfo = RwcTypeInfo.GetField("_surfaceNormal", BindingFlags.NonPublic | BindingFlags.Instance);
+                WheelRadiusInfo = RwcTypeInfo.GetField("WheelRadius");
 
                 FrictionCurveTypeInfo = ForwardFrictionInfo.PropertyType.GetTypeInfo();
                 FrictionCurveAsymptoteSlipInfo = FrictionCurveTypeInfo.GetProperty("AsymptoteSlip");
@@ -151,6 +148,9 @@ public class EllipseGripScript : MonoBehaviour
                         object forwardFriction = ForwardFrictionInfo.GetValue(c);
                         object sidewaysFriction = SidewaysFrictionInfo.GetValue(c);
 
+                        GameObject newGameObject = Instantiate(SkidmarkObjectPrefab, transform);
+                        Skidmarks newSkidmarks = newGameObject.GetComponent<Skidmarks>();
+
                         ResizableWheelDataList.Add(new ResizableWheelData(c,
                             forwardFriction,
                             sidewaysFriction,
@@ -161,7 +161,10 @@ public class EllipseGripScript : MonoBehaviour
                             (float)FrictionCurveAsymptoteValueInfo.GetValue(forwardFriction),
                             (float)FrictionCurveExtremumValueInfo.GetValue(forwardFriction),
                             (float)FrictionCurveAsymptoteValueInfo.GetValue(sidewaysFriction),
-                            (float)FrictionCurveExtremumValueInfo.GetValue(sidewaysFriction)
+                            (float)FrictionCurveExtremumValueInfo.GetValue(sidewaysFriction),
+                            newSkidmarks,
+                            c.transform.parent.parent.parent.localScale,
+                            c.transform.parent.Find("Wheel").localScale
                             ));
 
                         Debug.Log($"Added wheel data entry: {ResizableWheelDataList[ResizableWheelDataList.Count - 1]}");
@@ -191,6 +194,23 @@ public class EllipseGripScript : MonoBehaviour
         else
         {
             EmitParticles = false;
+        }
+
+        // Update the skidmarks timer
+        SkidmarksTimer -= Time.fixedDeltaTime;
+        bool UpdateSkidmarks;
+        if (!SkidmarksEnabled)
+        {
+            UpdateSkidmarks = false;
+        }
+        else if (SkidmarksTimer <= 0f)
+        {
+            UpdateSkidmarks = true;
+            SkidmarksTimer = SkidmarksPeriod;
+        }
+        else
+        {
+            UpdateSkidmarks = false;
         }
 
         // Physics
@@ -236,10 +256,29 @@ public class EllipseGripScript : MonoBehaviour
             FrictionCurveAsymptoteValueInfo.SetValue(data.sidewaysFrictionCurve, data.defaultSidewaysAsymptoteValue * sidewaysFrictionMultiplier);
             FrictionCurveExtremumValueInfo.SetValue(data.sidewaysFrictionCurve, data.defaultSidewaysExtremumValue * sidewaysFrictionMultiplier);
 
+            // Emit tire smoke particles
             if (overloadingFactor > 0 && EmitParticles)
             {
-                OverrideParams.startColor = ParticleGradient.Evaluate(overloadingFactor);
+                OverrideParams.startColor = ParticleColor * new Color(1f, 1f, 1f, Mathf.Pow(overloadingFactor, ParticleAlphaPower));
                 data.particleSystem.Emit(OverrideParams, 1);
+            }
+
+            // Skidmarks
+            if (UpdateSkidmarks)
+            {
+                if (overloadingFactor > 0)
+                {
+                    data.LastSkidmarkIndex = data.Skidmarks.AddSkidMark(
+                        data.collider.transform.position - data.collider.transform.parent.up * data.WheelRadius + ServiceProvider.Instance.GameWorld.FloatingOriginOffset,
+                        (Vector3)SurfaceNormalInfo.GetValue(data.collider),
+                        Mathf.Clamp01(overloadingFactor / SkidmarksMaximumOverload) * SkidmarksMaximumOpacity,
+                        data.LastSkidmarkIndex
+                        );
+                }
+                else
+                {
+                    data.LastSkidmarkIndex = -1;
+                }
             }
 
             if (DebugMode)
@@ -260,6 +299,7 @@ public class EllipseGripScript : MonoBehaviour
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_ToggleDebugMode");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_ToggleParticles");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetParticleColor");
+        ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetParticleAlphaExponent");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetStrength");
     }
 
@@ -273,9 +313,19 @@ public class EllipseGripScript : MonoBehaviour
         ParticlesEnabled = !ParticlesEnabled;
     }
 
+    public void ToggleSkidmarks()
+    {
+        SkidmarksEnabled = !SkidmarksEnabled;
+    }
+
     public void SetParticleColor(Color c)
     {
         ParticleColor = c;
+    }
+
+    public void SetParticleAlphaExponent(float f)
+    {
+        ParticleAlphaPower = f;
     }
 
     public void SetEffectStrength(float strength)
@@ -295,6 +345,8 @@ public class EllipseGripScript : MonoBehaviour
 
     private class ResizableWheelData
     {
+        private const float UNSCALED_WHEEL_THICKNESS = 0.2f;
+
         public Component collider;
         public object forwardFrictionCurve;
         public object sidewaysFrictionCurve;
@@ -311,9 +363,15 @@ public class EllipseGripScript : MonoBehaviour
 
         public ParticleSystem particleSystem;
 
+        public Skidmarks Skidmarks;
+        public int LastSkidmarkIndex = -1;
+        public float WheelThickness;
+        public float WheelRadius;
+
         public ResizableWheelData (Component c, object forwardFrictionCurve, object sidewaysFrictionCurve,
             float forwardAsymptoteSlip, float forwardExtremumSlip, float sidewaysAsymptoteSlip, float sidewaysExtremumSlip,
-            float forwardAsymptoteValue, float forwardExtremumValue, float sidewaysAsymptoteValue, float sidewaysExtremumValue)
+            float forwardAsymptoteValue, float forwardExtremumValue, float sidewaysAsymptoteValue, float sidewaysExtremumValue,
+            Skidmarks skidmarkComponent, Vector3 wheelPartScale, Vector3 wheelLocalScale)
         {
             collider = c;
             this.forwardFrictionCurve = forwardFrictionCurve;
@@ -330,6 +388,15 @@ public class EllipseGripScript : MonoBehaviour
             defaultSidewaysExtremumValue = sidewaysExtremumValue;
 
             particleSystem = c.transform.parent.parent.parent.gameObject.GetComponentInChildren<ParticleSystem>();
+
+            Skidmarks = skidmarkComponent;
+
+            // Wheel local scale determined in .../WheelRoot/Wheel
+            // Y = Z = real radius = size / 4
+            // X = size * width
+            WheelRadius = wheelPartScale.y * wheelLocalScale.y;
+            WheelThickness = wheelPartScale.x * wheelLocalScale.x * UNSCALED_WHEEL_THICKNESS;
+            Skidmarks.MarkWidth = WheelThickness;
         }
 
         public override string ToString()

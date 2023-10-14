@@ -1,14 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ModManifest buildID="25bb8131-8617-4a76-910c-83b91330285a">
-  <Mod name="Elliptical grip model" author="hpgbproductions" versionMajor="1" versionMinor="0" loadPriority="1000" lastUpdated="2023-09-23T13:25:47.6207357Z" apiVersion="1.0.0.0" description="">
+<ModManifest buildID="33b34162-cffd-4e4f-837d-51cd5cc9280a">
+  <Mod name="Elliptical grip model" author="hpgbproductions" versionMajor="1" versionMinor="1" loadPriority="1000" lastUpdated="2023-10-14T15:11:43.3374139Z" apiVersion="1.0.0.0" description="A mod that modifies the handling model of resizable wheels, and adds visual effects.&#xA;&#xA;This mod is distributed under the GNU General Public License V3.&#xA;&#xA;*** CREDITS ***&#xA;&#xA;Uses UnitySkidmarks&#xA;Copyright (c) 2017, Nition&#xD;&#xA;https://github.com/Nition/UnitySkidmarks&#xD;&#xA;All rights reserved.&#xD;&#xA;&#xD;&#xA;Redistribution and use in source and binary forms, with or without&#xD;&#xA;modification, are permitted provided that the following conditions are met:&#xD;&#xA;&#xD;&#xA;* Redistributions of source code must retain the above copyright notice, this&#xD;&#xA;  list of conditions and the following disclaimer.&#xD;&#xA;&#xD;&#xA;* Redistributions in binary form must reproduce the above copyright notice,&#xD;&#xA;  this list of conditions and the following disclaimer in the documentation&#xD;&#xA;  and/or other materials provided with the distribution.&#xD;&#xA;&#xD;&#xA;THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot;&#xD;&#xA;AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE&#xD;&#xA;IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE&#xD;&#xA;DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE&#xD;&#xA;FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL&#xD;&#xA;DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR&#xD;&#xA;SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER&#xD;&#xA;CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,&#xD;&#xA;OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE&#xD;&#xA;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.">
     <Steam title="" visibility="Public" previewPath="" language="English" tags="">
       <description></description>
     </Steam>
     <GameObjects>
       <GameObject name="elg-plugin" path="Assets/_ModAssets_/elg-plugin.prefab" />
     </GameObjects>
-    <Assets />
-    <MaterialShaderMap />
+    <Assets>
+      <Asset path="Assets/Nition/UnitySkidmarks/Skidmarks.shader" />
+      <Asset path="Assets/Nition/UnitySkidmarks/SkidmarksMat.mat" />
+      <Asset path="Assets/Nition/UnitySkidmarks/SkidmarksTex2.psd" />
+    </Assets>
+    <MaterialShaderMap>
+      <Material name="SkidmarksMat" shader="Skidmarks" />
+    </MaterialShaderMap>
     <Assemblies>
       <Assembly name="Ellipticalgripmodel-Assembly-CSharp.dll" path="Assets/_ModAssets_/Ellipticalgripmodel-Assembly-CSharp.dll.bytes" isProjectAssembly="true" />
     </Assemblies>
