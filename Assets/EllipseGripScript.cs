@@ -298,6 +298,7 @@ public class EllipseGripScript : MonoBehaviour
     {
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_ToggleDebugMode");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_ToggleParticles");
+        ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_ToggleSkidmarks");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetParticleColor");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetParticleAlphaExponent");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetStrength");
