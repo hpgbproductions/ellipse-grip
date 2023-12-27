@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using UnityEngine;
 
@@ -47,6 +48,26 @@ public class EllipseGripScript : MonoBehaviour
     // Maximum loss of grip perpendicular to current load
     private float EffectStrength = 0.25f;
 
+    // Save file
+    string PathNachsave;
+    string PathSettings;
+    string NameNachsave = "NACHSAVE";
+    string NameSettings = "EGS.DAT";
+    string FileHeaderV0 = "EGSAVE0";
+    /*
+     * Saved settings definition v.0 (BinaryReader/Writer)
+     * string       FileHeaderV0
+     * bool         DebugMode
+     * bool         ParticlesEnabled
+     * float        ParticleColor.r
+     * float        ParticleColor.g
+     * float        ParticleColor.b
+     * float        ParticleColor.a
+     * float        ParticleAlphaPower
+     * bool         SkidmarksEnabled
+     * float        EffectStrength
+     */
+
     private bool DebugMode = false;
     private StringBuilder DebugText;
 
@@ -54,12 +75,61 @@ public class EllipseGripScript : MonoBehaviour
     {
         ResizableWheelDataList = new List<ResizableWheelData>(10);
         DebugText = new StringBuilder(1000);
+
         ServiceProvider.Instance.DevConsole.RegisterCommand("EllipseGrip_ToggleDebugMode", ToggleDebugMode);
         ServiceProvider.Instance.DevConsole.RegisterCommand("EllipseGrip_ToggleParticles", ToggleParticles);
         ServiceProvider.Instance.DevConsole.RegisterCommand("EllipseGrip_ToggleSkidmarks", ToggleSkidmarks);
         ServiceProvider.Instance.DevConsole.RegisterCommand<Color>("EllipseGrip_SetParticleColor", SetParticleColor);
         ServiceProvider.Instance.DevConsole.RegisterCommand<float>("EllipseGrip_SetParticleAlphaExponent", SetParticleAlphaExponent);
         ServiceProvider.Instance.DevConsole.RegisterCommand<float>("EllipseGrip_SetStrength", SetEffectStrength);
+
+        PathNachsave = Path.Combine(Application.persistentDataPath, NameNachsave);
+        PathSettings = Path.Combine(PathNachsave, NameSettings);
+
+        if (!Directory.Exists(PathNachsave))
+        {
+            Directory.CreateDirectory(PathNachsave);
+        }
+
+        if (File.Exists(PathSettings))
+        {
+            // Load settings
+            BinaryReader reader = new BinaryReader(File.OpenRead(PathSettings));
+            try
+            {
+                string header = reader.ReadString();
+                if (header == FileHeaderV0)
+                {
+                    bool _debugMode = reader.ReadBoolean();
+                    bool _particlesEnabled = reader.ReadBoolean();
+                    float _particleColor_r = reader.ReadSingle();
+                    float _particleColor_g = reader.ReadSingle();
+                    float _particleColor_b = reader.ReadSingle();
+                    float _particleColor_a = reader.ReadSingle();
+                    float _particleAlphaPower = reader.ReadSingle();
+                    bool _skidmarksEnabled = reader.ReadBoolean();
+                    float _effectStrength = reader.ReadSingle();
+
+                    DebugMode = _debugMode;
+                    ParticlesEnabled = _particlesEnabled;
+                    ParticleColor = new Color(_particleColor_r, _particleColor_g, _particleColor_b, _particleColor_a);
+                    ParticleAlphaPower = _particleAlphaPower;
+                    SkidmarksEnabled = _skidmarksEnabled;
+                    EffectStrength = _effectStrength;
+                }
+                else
+                {
+                    Debug.LogError($"Failed to read ellipse-grip settings data: invalid header \"{header}\"");
+                }
+
+                Debug.Log("Successfully read ellipse-grip settings data");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to read ellipse-grip settings data: {ex.Message}");
+            }
+            reader.Close();
+        }
     }
 
     private void FixedUpdate()
@@ -302,6 +372,20 @@ public class EllipseGripScript : MonoBehaviour
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetParticleColor");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetParticleAlphaExponent");
         ServiceProvider.Instance.DevConsole.UnregisterCommand("EllipseGrip_SetStrength");
+
+        // Save settings file
+        BinaryWriter writer = new BinaryWriter(File.Create(PathSettings));
+        writer.Write(FileHeaderV0);
+        writer.Write(DebugMode);
+        writer.Write(ParticlesEnabled);
+        writer.Write(ParticleColor.r);
+        writer.Write(ParticleColor.g);
+        writer.Write(ParticleColor.b);
+        writer.Write(ParticleColor.a);
+        writer.Write(ParticleAlphaPower);
+        writer.Write(SkidmarksEnabled);
+        writer.Write(EffectStrength);
+        writer.Close();
     }
 
     public void ToggleDebugMode()
